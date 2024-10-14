@@ -30,8 +30,8 @@ jobs:
         id: build_image 
         uses: docker/build-push-action@v2
         with:
-          context: .  # Make sure this context is correct
-          file: app/login/Dockerfile  # Adjust if the path is different
+          context: app/login  # Make sure this context is correct
+          file: Dockerfile  # Adjust if the path is different
           push: true
           tags: niteshcontainers.azurecr.io/flask-app:latest
 
