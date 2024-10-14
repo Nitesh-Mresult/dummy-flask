@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main  # Change this to your default branch
+      - main
 
 jobs:
   build:
@@ -13,8 +13,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: List files (for debugging)
-        run: ls -la  # Check that Dockerfile and requirements.txt are present
+      - name: List files in app/login directory (for debugging)
+        run: ls -la app/login
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -30,8 +30,8 @@ jobs:
         id: build_image 
         uses: docker/build-push-action@v2
         with:
-          context: .  # Make sure this context is correct
-          file: app/login/Dockerfile  # Adjust if the path is different
+          context: app/login        # Set context to the app/login directory
+          file: app/login/Dockerfile  # Specify the path to the Dockerfile
           push: true
           tags: niteshcontainers.azurecr.io/flask-app:latest
 
