@@ -28,6 +28,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
+          file: app/login/Dockerfile
           push: true
           tags: niteshcontainers.azurecr.io/flask-app:latest
 
