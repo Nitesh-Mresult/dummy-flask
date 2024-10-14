@@ -30,8 +30,8 @@ jobs:
         id: build_image 
         uses: docker/build-push-action@v2
         with:
-          context: app/login        # Set context to the app/login directory
-          file: app/login/Dockerfile  # Specify the path to the Dockerfile
+          context: app/login
+          file: app/login/Dockerfile
           push: true
           tags: niteshcontainers.azurecr.io/flask-app:latest
 
@@ -49,7 +49,9 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Set context for AKS
         run: |
