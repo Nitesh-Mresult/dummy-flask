@@ -50,7 +50,7 @@ jobs:
       - name: Deploy to AKS
         run: |
           kubectl apply -f app/kubernetes/deployment.yaml
-          kubectl set image deployment/flask-app-deployment flask-container=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
+          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
           kubectl apply -f app/kubernetes/my-app-service.yaml
           kubectl apply -f app/kubernetes/my-app-ingress.yaml
           
