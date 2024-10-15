@@ -58,5 +58,6 @@ jobs:
 
       - name: Deploy to AKS
         run: |  
+          echo "Deploying image: ${{ env.IMAGE_NAME }}"
           kubectl set image deployment/flask-app-deployment flask-app=${{ env.IMAGE_NAME }}
           kubectl rollout status deployment/flask-app-deployment
