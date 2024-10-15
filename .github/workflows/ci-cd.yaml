@@ -63,7 +63,7 @@ jobs:
 
       - name: Deploy to AKS
         run: |
-          kubectl apply -f k8s/deploy.yaml
+          kubectl apply -f app/kubernetes/deployment.yaml
           echo "Deploying image: ${{ env.IMAGE_NAME }}"
           kubectl set image deployment/flask-app-deployment flask-app=${{ env.IMAGE_NAME }}
           kubectl apply -f app/kubernetes/my-app-service.yaml
