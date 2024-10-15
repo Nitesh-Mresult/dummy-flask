@@ -56,8 +56,14 @@ jobs:
         run: |
           az aks get-credentials --resource-group POC_test --name flask-app
 
+      - name: Verify kubectl context
+        run: kubectl config current-context
+
+
+
       - name: Deploy to AKS
-        run: |  
-          echo "Deploying image: ${{ env.IMAGE_NAME }}"
+        run: |
+          kubectl apply -f k8s/deploy.yaml
           kubectl set image deployment/flask-app-deployment flask-app=${{ env.IMAGE_NAME }}
-          kubectl rollout status deployment/flask-app-deployment
+          kubectl apply -f k8s/my-app-service.yaml
+          kubectl apply -f k8s/my-app-ingress.yaml
