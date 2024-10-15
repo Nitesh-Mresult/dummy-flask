@@ -36,7 +36,7 @@ jobs:
           tags: niteshcontainers.azurecr.io/flask-app:latest
 
       - name: Set image name
-        run: echo "IMAGE_NAME=niteshcontainers.azureuser.io/flask-app:latest" >> $GITHUB_ENV
+        run: echo "IMAGE_NAME=niteshcontainers.azurecr.io/flask-app:latest" >> $GITHUB_ENV
 
   deploy:
     runs-on: ubuntu-latest
@@ -51,7 +51,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-
       - name: Set context for AKS
         run: |
           az aks get-credentials --resource-group POC_test --name flask-app
@@ -59,12 +58,12 @@ jobs:
       - name: Verify kubectl context
         run: kubectl config current-context
 
-
-
       - name: Deploy to AKS
         run: |
           kubectl apply -f app/kubernetes/deployment.yaml
           echo "Deploying image: ${{ env.IMAGE_NAME }}"
+          - name: Debug IMAGE_NAME
+            run: echo "IMAGE_NAME: ${{ env.IMAGE_NAME }}"
           kubectl set image deployment/flask-app-deployment flask-app=${{ env.IMAGE_NAME }}
           kubectl apply -f app/kubernetes/my-app-service.yaml
           kubectl apply -f app/kubernetes/my-app-ingress.yaml
