@@ -58,6 +58,10 @@ jobs:
       - name: Verify kubectl context
         run: kubectl config current-context
 
+      - name: Debug IMAGE_NAME
+        run: |
+          echo "IMAGE_NAME: ${{ env.IMAGE_NAME }}"
+
       - name: Deploy to AKS
         run: |
           kubectl apply -f app/kubernetes/deployment.yaml
@@ -65,7 +69,3 @@ jobs:
           kubectl set image deployment/flask-app-deployment flask-app=${{ env.IMAGE_NAME }}
           kubectl apply -f app/kubernetes/my-app-service.yaml
           kubectl apply -f app/kubernetes/my-app-ingress.yaml
-
-      - name: Debug IMAGE_NAME
-        run: |
-          echo "IMAGE_NAME: ${{ env.IMAGE_NAME }}"
