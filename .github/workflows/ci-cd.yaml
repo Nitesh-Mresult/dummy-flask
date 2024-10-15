@@ -36,7 +36,7 @@ jobs:
           tags: niteshcontainers.azurecr.io/flask-app:latest
 
       - name: Set image name
-        run: echo "IMAGE_NAME=niteshcontainers.azurecr.io/flask-app:latest" >> $GITHUB_ENV
+        run: echo "IMAGE_NAME=niteshcontainers.azureuser.io/flask-app:latest" >> $GITHUB_ENV
 
   deploy:
     runs-on: ubuntu-latest
