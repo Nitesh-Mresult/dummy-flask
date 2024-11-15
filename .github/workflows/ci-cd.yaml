@@ -76,6 +76,12 @@ jobs:
         run: |
           az aks get-credentials --resource-group POC_test --name flask-app --overwrite-existing
 
+      # Ensure the AKS cluster is ready before applying deployment
+      - name: Wait for AKS Cluster to be Ready
+        run: |
+          kubectl get nodes
+          kubectl get pods --all-namespaces
+
       # Deploy Flask app to AKS
       - name: Deploy to AKS
         run: |
