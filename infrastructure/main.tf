@@ -1,27 +1,29 @@
 provider "azurerm" {
   features {}
-
-  # Optionally, use environment variables to manage Azure credentials
-  subscription_id = var.subscription_id   # Refers to a variable in variables.tf
 }
 
-resource "azurerm_container_registry" "example" {
-  name                = "NiteshContainers"
-  resource_group_name = "POC_test"
-  location            = "australiaeast"
-  sku                 = "Standard"
-  admin_enabled       = true
+resource "azurerm_resource_group" "rg" {
+  name     = "POC_test"
+  location = "East US"
 }
 
-resource "azurerm_kubernetes_cluster" "example" {
-  name                = "flask-app"
-  location            = "australiaeast"
-  resource_group_name = "POC_test"
+resource "azurerm_container_registry" "acr" {
+  name                     = "niteshcontainers"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  sku                      = "Basic"
+  admin_enabled            = true
+}
+
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = "flask-app-cluster"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
   dns_prefix          = "flask-app-dns"
 
   default_node_pool {
-    name       = "agentpool"
-    vm_size    = "Standard_D8ds_v5"
+    name       = "nodepool"
+    vm_size    = "Standard_DS2_v2"
     node_count = 2
   }
 
