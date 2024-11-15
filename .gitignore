@@ -26,5 +26,11 @@ instance/
 *.DS_Store
 *.egg-info/
 
-# Terraform
-terraform.tfvars
+# Local Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Terraform lock file (optional, but typically ignored)
+.terraform.lock.hcl
