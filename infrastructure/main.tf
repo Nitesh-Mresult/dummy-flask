@@ -1,36 +1,35 @@
 provider "azurerm" {
   features {}
 
-  # Explicitly define the subscription ID (if needed)
-  subscription_id = "7532a935-5f60-4226-b24a-402e4ba6a990"  # Replace with your actual subscription ID
+  # Optionally, use environment variables to manage Azure credentials
+  subscription_id = var.subscription_id   # Refers to a variable in variables.tf
 }
 
 resource "azurerm_container_registry" "example" {
-  name                = "NiteshContainers"  # Keep the same name as the existing ACR
-  resource_group_name = "POC_test"          # Keep the same resource group
-  location            = "australiaeast"     # Keep the same location as the existing ACR
-  sku                 = "Standard"          # Revert to standard sku tier
-  admin_enabled       = true                # Set as per your requirements
+  name                = "NiteshContainers"
+  resource_group_name = "POC_test"
+  location            = "australiaeast"
+  sku                 = "Standard"
+  admin_enabled       = true
 }
 
-# Azure Kubernetes Service (AKS) Configuration
 resource "azurerm_kubernetes_cluster" "example" {
-  name                = "flask-app"                 # Existing AKS cluster name
-  location            = "australiaeast"             # Existing location
-  resource_group_name = "POC_test"                  # Existing resource group
-  dns_prefix          = "flask-app-dns"             # Revert to the original DNS prefix
+  name                = "flask-app"
+  location            = "australiaeast"
+  resource_group_name = "POC_test"
+  dns_prefix          = "flask-app-dns"
 
   default_node_pool {
-    name                = "agentpool"  # Keep the original node pool name
-    vm_size             = "Standard_D8ds_v5"  # Revert to original VM size
-    node_count          = 2  # Keep the original node count
+    name       = "agentpool"
+    vm_size    = "Standard_D8ds_v5"
+    node_count = 2
   }
 
   identity {
-    type = "SystemAssigned"                       # Managed identity for AKS
+    type = "SystemAssigned"
   }
 
   tags = {
-    environment = "development"                   # Optional: Replace with actual tags if needed
+    environment = "development"
   }
 }

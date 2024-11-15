@@ -25,3 +25,6 @@ instance/
 # Misc
 *.DS_Store
 *.egg-info/
+
+# Terraform
+terraform.tfvars
