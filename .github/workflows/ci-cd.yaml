@@ -6,7 +6,6 @@ on:
       - main
 
 jobs:
-  # Step 1: Deploy infrastructure with Terraform and apply changes
   infrastructure-deploy:
     runs-on: ubuntu-latest
     environment: production
@@ -36,11 +35,7 @@ jobs:
 
       # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
-        run: terraform init \
-          -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
-          -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
-          -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
-          -backend-config="key=${{ secrets.TF_KEY }}"
+        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure  # Point to the directory where your Terraform files are located
 
       # Step 1.6: Terraform Plan
