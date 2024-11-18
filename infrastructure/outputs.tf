@@ -11,7 +11,7 @@ output "aks_cluster_name" {
 output "aks_cluster_kube_config" {
   description = "The kubeconfig file for the AKS cluster."
   value       = azurerm_kubernetes_cluster.example.kube_config_raw
-  sensitive   = true  # Marking this output as sensitive
+  sensitive   = true
 }
 
 output "acr_login_server" {
