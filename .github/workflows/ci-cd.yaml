@@ -34,29 +34,24 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 1.5: Initialize Terraform (including backend configuration)
+      # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
         run: terraform init \
-          -backend-config="resource_group_name=${{ secrets.TF_BACKEND_RESOURCE_GROUP }}" \
-          -backend-config="storage_account_name=${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}" \
-          -backend-config="container_name=${{ secrets.TF_BACKEND_CONTAINER }}" \
-          -backend-config="key=${{ secrets.TF_BACKEND_KEY }}"
-        working-directory: ./infrastructure
+          -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+          -backend-config="key=${{ secrets.TF_KEY }}"
+        working-directory: ./infrastructure  # Point to the directory where your Terraform files are located
 
-      # Step 1.6: Terraform Validate (check if configuration is valid)
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ./infrastructure
-
-      # Step 1.7: Terraform Plan
+      # Step 1.6: Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-        working-directory: ./infrastructure
+        working-directory: ./infrastructure  # Ensure this points to the correct directory
 
-      # Step 1.8: Terraform Apply (to apply the changes)
+      # Step 1.7: Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
-        working-directory: ./infrastructure
+        working-directory: ./infrastructure  # Apply Terraform changes
 
   # Step 2: Build and deploy Flask app to AKS
   build-and-deploy:
@@ -76,7 +71,7 @@ jobs:
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          login-server: niteshcontainers.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
@@ -84,21 +79,21 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/flask-app:$IMAGE_TAG ./app/login
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/flask-app:$IMAGE_TAG
+          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login
+          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG
 
       # Step 2.5: Set up AKS credentials
       - name: Set up AKS credentials
         run: |
-          az aks get-credentials --resource-group ${{ secrets.RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+          az aks get-credentials --resource-group POC_test --name flask-app --overwrite-existing
 
       # Step 2.6: Deploy to AKS by updating the image in the deployment
       - name: Update AKS Deployment
         run: |
-          kubectl apply -f ./app/kubernetes/deployment.yaml
-          kubectl set image deployment/flask-app-deployment flask-app=${{ secrets.ACR_LOGIN_SERVER }}/flask-app:${{ github.sha }}
-          kubectl apply -f ./app/kubernetes/my-app-service.yaml
-          kubectl apply -f ./app/kubernetes/my-app-ingress.yaml
+          kubectl apply -f app/kubernetes/deployment.yaml
+          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
+          kubectl apply -f app/kubernetes/my-app-service.yaml
+          kubectl apply -f app/kubernetes/my-app-ingress.yaml
 
       # Step 2.7: Verify deployment status in AKS
       - name: Verify Deployment Status
