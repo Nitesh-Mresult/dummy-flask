@@ -25,11 +25,11 @@ jobs:
         with:
           terraform_version: '1.5.0'
 
-      # Step 1.4: Authenticate with Azure
+      # Step 1.4: Authenticate with Azure using Service Principal
       - name: Log in to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Your AZURE_CREDENTIALS stored as a secret
 
       # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
@@ -46,7 +46,6 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ./infrastructure  # Apply Terraform changes
 
-  # Step 2: Build and deploy Flask app to AKS
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: infrastructure-deploy  # Ensure infrastructure is deployed before app deployment
@@ -64,16 +63,16 @@ jobs:
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: niteshcontainers.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          login-server: niteshcontainers.azurecr.io  # Replace with your ACR URL
+          username: ${{ secrets.ACR_USERNAME }}  # Your ACR username stored as a secret
+          password: ${{ secrets.ACR_PASSWORD }}  # Your ACR password stored as a secret
 
       # Step 2.4: Build and Push Docker Image to ACR
       - name: Build and Push Docker Image
         run: |
           IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
-          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login
-          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG
+          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login  # Build Docker image for Flask app
+          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG  # Push image to ACR
 
       # Step 2.5: Set up AKS credentials
       - name: Set up AKS credentials
@@ -83,12 +82,12 @@ jobs:
       # Step 2.6: Deploy to AKS by updating the image in the deployment
       - name: Update AKS Deployment
         run: |
-          kubectl apply -f app/kubernetes/deployment.yaml
-          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
-          kubectl apply -f app/kubernetes/my-app-service.yaml
-          kubectl apply -f app/kubernetes/my-app-ingress.yaml
+          kubectl apply -f app/kubernetes/deployment.yaml  # Apply the Kubernetes deployment
+          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}  # Update image in the deployment
+          kubectl apply -f app/kubernetes/my-app-service.yaml  # Apply service definition
+          kubectl apply -f app/kubernetes/my-app-ingress.yaml  # Apply ingress definition
 
       # Step 2.7: Verify deployment status in AKS
       - name: Verify Deployment Status
         run: |
-          kubectl rollout status deployment/flask-app-deployment
+          kubectl rollout status deployment/flask-app-deployment  # Ensure the deployment is successful
