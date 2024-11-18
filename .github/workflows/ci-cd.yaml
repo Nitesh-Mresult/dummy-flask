@@ -29,19 +29,27 @@ jobs:
       - name: Log in to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Your AZURE_CREDENTIALS stored as a secret
+          creds: ${{ secrets.azure_credentials }}  # The secret with the Service Principal credentials
 
-      # Step 1.5: Initialize Terraform with backend configuration
+      # Step 1.5: Set Azure Service Principal Credentials for Terraform
+      - name: Set Azure Service Principal Credentials for Terraform
+        run: |
+          echo "ARM_CLIENT_ID=$(echo ${{ secrets.azure_credentials }} | jq -r .clientId)" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=$(echo ${{ secrets.azure_credentials }} | jq -r .clientSecret)" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=$(echo ${{ secrets.azure_credentials }} | jq -r .tenantId)" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=$(echo ${{ secrets.azure_credentials }} | jq -r .subscriptionId)" >> $GITHUB_ENV
+
+      # Step 1.6: Initialize Terraform with backend configuration
       - name: Terraform Init
         run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure  # Ensure the path to Terraform files is correct
 
-      # Step 1.6: Terraform Plan
+      # Step 1.7: Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         working-directory: ./infrastructure  # Ensure the correct directory
 
-      # Step 1.7: Terraform Apply
+      # Step 1.8: Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         working-directory: ./infrastructure  # Apply Terraform changes
