@@ -25,15 +25,18 @@ jobs:
         with:
           terraform_version: '1.5.0'
 
-      # Step 1.4: Authenticate with Azure
+      # Step 1.4: Authenticate with Azure using Service Principal
       - name: Log in to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Use your service principal credentials
 
       # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
-        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
+        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
+                             -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
+                             -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+                             -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure  # Ensure the path to Terraform files is correct
 
       # Step 1.6: Terraform Plan with refresh disabled
