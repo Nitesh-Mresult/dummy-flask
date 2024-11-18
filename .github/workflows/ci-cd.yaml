@@ -29,15 +29,15 @@ jobs:
       - name: Log in to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.azure_credentials }}  # The secret with the Service Principal credentials
+          creds: ${{ secrets.azure_credentials }}  # Using the `azure_credentials` secret for authentication
 
-      # Step 1.5: Set Azure Service Principal Credentials for Terraform
+      # Step 1.5: Set Azure Service Principal Credentials for Terraform (correcting the issue)
       - name: Set Azure Service Principal Credentials for Terraform
         run: |
-          echo "ARM_CLIENT_ID=$(echo ${{ secrets.azure_credentials }} | jq -r .clientId)" >> $GITHUB_ENV
-          echo "ARM_CLIENT_SECRET=$(echo ${{ secrets.azure_credentials }} | jq -r .clientSecret)" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=$(echo ${{ secrets.azure_credentials }} | jq -r .tenantId)" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=$(echo ${{ secrets.azure_credentials }} | jq -r .subscriptionId)" >> $GITHUB_ENV
+          echo "ARM_CLIENT_ID=${{ fromJson(secrets.azure_credentials).clientId }}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ fromJson(secrets.azure_credentials).clientSecret }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ fromJson(secrets.azure_credentials).tenantId }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
 
       # Step 1.6: Initialize Terraform with backend configuration
       - name: Terraform Init
