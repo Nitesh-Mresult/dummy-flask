@@ -11,59 +11,58 @@ jobs:
     environment: production
 
     steps:
-      # Step 1: Checkout code (including Terraform files in 'infrastructure')
-      - name: Checkout Terraform and Application Code
+      # Step 1.1: Checkout Terraform code (from the 'infrastructure' subdirectory)
+      - name: Checkout Terraform Code
         uses: actions/checkout@v2
+        with:
+          path: infrastructure/  # Ensure the Terraform code is in the 'infrastructure' folder
 
-      # Step 2: List files in the infrastructure directory (for debugging)
+      # Step 1.2: List files in the 'infrastructure' directory (debugging step)
       - name: List files in infrastructure directory
-        run: ls -la ./infrastructure  # Ensure Terraform files are in this directory
+        run: ls -la ./infrastructure  # List all files to check if the .tf files are there
 
-      # Step 3: Set up Terraform
+      # Step 1.3: Set up Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: '1.5.0'
 
-      # Step 4: Log in to Azure using credentials stored in GitHub Secrets
+      # Step 1.4: Authenticate with Azure
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 5: Initialize Terraform with backend configuration
+      # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
-        run: terraform init \
-          -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
-          -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
-          -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
-          -backend-config="key=${{ secrets.TF_KEY }}"
-        working-directory: ./infrastructure  # Specify the directory with your .tf files
+        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
+        working-directory: ./infrastructure  # Point to the directory where your Terraform files are located
 
-      # Step 6: Terraform Plan
+      # Step 1.6: Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-        working-directory: ./infrastructure  # Ensure it runs inside the 'infrastructure' directory
+        working-directory: ./infrastructure  # Ensure this points to the correct directory
 
-      # Step 7: Terraform Apply
+      # Step 1.7: Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
-        working-directory: ./infrastructure  # Apply changes from 'infrastructure' directory
+        working-directory: ./infrastructure  # Apply Terraform changes
 
+  # Step 2: Build and deploy Flask app to AKS
   build-and-deploy:
     runs-on: ubuntu-latest
-    needs: infrastructure-deploy  # Ensure infrastructure is deployed before the Flask app
+    needs: infrastructure-deploy  # Ensure infrastructure is deployed before app deployment
 
     steps:
-      # Step 1: Checkout the Flask app code
+      # Step 2.1: Checkout Flask application code
       - name: Checkout Flask Application Code
         uses: actions/checkout@v2
 
-      # Step 2: Set up Docker Buildx
+      # Step 2.2: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      # Step 3: Log in to Azure Container Registry (ACR)
+      # Step 2.3: Login to Azure Container Registry (ACR)
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
@@ -71,27 +70,24 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # Step 4: Build and push the Docker image to ACR
+      # Step 2.4: Build and Push Docker Image to ACR
       - name: Build and Push Docker Image
         run: |
-          IMAGE_TAG=${{ github.sha }}  # Use commit SHA as the image tag
+          IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
           docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login
           docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG
-
-      # Step 5: Set up AKS credentials
+      # Step 2.5: Set up AKS credentials
       - name: Set up AKS credentials
         run: |
           az aks get-credentials --resource-group POC_test --name flask-app --overwrite-existing
-
-      # Step 6: Deploy to AKS
+      # Step 2.6: Deploy to AKS by updating the image in the deployment
       - name: Update AKS Deployment
         run: |
           kubectl apply -f app/kubernetes/deployment.yaml
           kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
           kubectl apply -f app/kubernetes/my-app-service.yaml
           kubectl apply -f app/kubernetes/my-app-ingress.yaml
-
-      # Step 7: Verify deployment status in AKS
+      # Step 2.7: Verify deployment status in AKS
       - name: Verify Deployment Status
         run: |
           kubectl rollout status deployment/flask-app-deployment
