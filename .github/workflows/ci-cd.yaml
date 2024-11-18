@@ -38,7 +38,7 @@ jobs:
           -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
           -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
           -backend-config="key=${{ secrets.TF_KEY }}"
-        working-directory: ./infrastructure  # Point to 'infrastructure' folder
+        working-directory: ./infrastructure  # Specify the directory with your .tf files
 
       # Step 6: Terraform Plan
       - name: Terraform Plan
