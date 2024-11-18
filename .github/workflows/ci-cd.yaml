@@ -9,7 +9,6 @@ jobs:
   infrastructure-deploy:
     runs-on: ubuntu-latest
     environment: production
-    timeout-minutes: 90  # Allow up to 90 minutes for infrastructure deployment
 
     steps:
       # Step 1.1: Checkout the repository
@@ -32,29 +31,24 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}  # Use your service principal credentials
 
-      # Step 1.5: Set environment variables for Terraform to authenticate with Azure
-      - name: Set Environment Variables for Terraform
-        run: |
-          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-
-      # Step 1.6: Initialize Terraform with backend configuration
+      # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
-        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
-                           -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
-                           -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
-                           -backend-config="key=${{ secrets.TF_KEY }}" \
-                           -input=false -no-color
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+            -backend-config="key=${{ secrets.TF_KEY }}" \
+            -input=false \
+            -no-color
         working-directory: ./infrastructure  # Ensure the path to Terraform files is correct
 
-      # Step 1.7: Terraform Plan with refresh disabled
+      # Step 1.6: Terraform Plan with refresh disabled
       - name: Terraform Plan
         run: terraform plan -out=tfplan -refresh=false
         working-directory: ./infrastructure  # Ensure the correct directory
 
-      # Step 1.8: Terraform Apply
+      # Step 1.7: Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         working-directory: ./infrastructure  # Apply Terraform changes
@@ -63,7 +57,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: infrastructure-deploy  # Ensure infrastructure is deployed before app deployment
-    timeout-minutes: 30  # Allow up to 30 minutes for build and deployment
 
     steps:
       # Step 2.1: Checkout Flask application code
