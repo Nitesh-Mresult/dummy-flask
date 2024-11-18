@@ -11,15 +11,13 @@ jobs:
     environment: production
 
     steps:
-      # Step 1.1: Checkout Terraform code (from the 'infrastructure' subdirectory)
-      - name: Checkout Terraform Code
+      # Step 1.1: Checkout the repository
+      - name: Checkout Repository
         uses: actions/checkout@v2
-        with:
-          path: infrastructure/  # Ensure the Terraform code is in the 'infrastructure' folder
 
-      # Step 1.2: List files in the 'infrastructure' directory (debugging step)
+      # Step 1.2: List files in 'infrastructure' directory (debugging step)
       - name: List files in infrastructure directory
-        run: ls -la ./infrastructure  # List all files to check if the .tf files are there
+        run: ls -la ./infrastructure  # Ensure .tf files are present
 
       # Step 1.3: Set up Terraform
       - name: Set up Terraform
@@ -36,12 +34,12 @@ jobs:
       # Step 1.5: Initialize Terraform with backend configuration
       - name: Terraform Init
         run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
-        working-directory: ./infrastructure  # Point to the directory where your Terraform files are located
+        working-directory: ./infrastructure  # Ensure the path to Terraform files is correct
 
       # Step 1.6: Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-        working-directory: ./infrastructure  # Ensure this points to the correct directory
+        working-directory: ./infrastructure  # Ensure the correct directory
 
       # Step 1.7: Terraform Apply
       - name: Terraform Apply
@@ -76,10 +74,12 @@ jobs:
           IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
           docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login
           docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG
+
       # Step 2.5: Set up AKS credentials
       - name: Set up AKS credentials
         run: |
-          az aks get-credentials --resource-group POC_test --name flask-app --overwrite-existing
+          az aks get-credentials --resource-group ${{ secrets.TF_RESOURCE_GROUP }} --name flask-app --overwrite-existing
+
       # Step 2.6: Deploy to AKS by updating the image in the deployment
       - name: Update AKS Deployment
         run: |
@@ -87,6 +87,7 @@ jobs:
           kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
           kubectl apply -f app/kubernetes/my-app-service.yaml
           kubectl apply -f app/kubernetes/my-app-ingress.yaml
+
       # Step 2.7: Verify deployment status in AKS
       - name: Verify Deployment Status
         run: |
