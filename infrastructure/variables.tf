@@ -1,49 +1,20 @@
-variable "subscription_id" {
-  description = "The Azure Subscription ID"
-  type        = string
-}
-
 variable "resource_group_name" {
-  description = "The name of the resource group"
-  type        = string
-  default     = "POC_test"
-}
-
-variable "location" {
-  description = "The Azure region where resources will be deployed"
-  type        = string
-  default     = "East US"
-}
-
-variable "acr_name" {
-  description = "The name of the Azure Container Registry"
+  description = "The name of the Azure Resource Group"
   type        = string
 }
 
-variable "aks_cluster_name" {
-  description = "The name of the Azure Kubernetes Service (AKS) cluster"
+variable "storage_account_name" {
+  description = "The name of the Azure Storage Account"
   type        = string
 }
 
-variable "node_pool_size" {
-  description = "The size of the node pool for the AKS cluster"
-  type        = number
-  default     = 2
+variable "container_name" {
+  description = "The name of the Azure Storage Container"
+  type        = string
 }
 
-variable "node_pool_vm_size" {
-  description = "The virtual machine size for the AKS node pool"
+variable "tfstate_key" {
+  description = "The key name for the Terraform state file in the container"
   type        = string
-  default     = "Standard_DS2_v2"
-}
-
-variable "dns_prefix" {
-  description = "The DNS prefix for the AKS cluster"
-  type        = string
-  default     = "flask-app-dns"
-}
-
-variable "docker_image_tag" {
-  description = "The Docker image tag for the Flask app"
-  type        = string
+  default     = "terraform.tfstate"  # Default to a common Terraform state file name
 }
