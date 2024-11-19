@@ -28,3 +28,20 @@ variable "aks_cluster_name" {
   description = "The name of the AKS cluster."
   type        = string
 }
+
+variable "node_pool_size" {
+  description = "The size of the node pool"
+  type        = number
+  default     = 3  # You can set a default value if desired
+}
+
+variable "docker_image_tag" {
+  description = "Docker image tag for the container"
+  type        = string
+  default     = "latest"
+}
+
+variable "subscription_id" {
+  description = "The subscription ID for Azure"
+  type        = string
+}

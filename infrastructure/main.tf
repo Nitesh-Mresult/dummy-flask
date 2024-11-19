@@ -1,6 +1,9 @@
 provider "azurerm" {
   features {}
-  subscription_id = var.subscription_id
+  subscription_id = var.subscription_id  # Optional, will be pulled from AZURE_CREDENTIALS
+  client_id       = var.client_id
+  client_secret   = var.client_secret
+  tenant_id       = var.tenant_id
 }
 
 resource "azurerm_resource_group" "rg" {
