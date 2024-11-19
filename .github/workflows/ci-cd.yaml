@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      # Step 1.2: Cache Terraform modules
+      # Step 1.2: Cache Terraform modules (optional, for faster runs)
       - name: Cache Terraform modules
         uses: actions/cache@v2
         with:
