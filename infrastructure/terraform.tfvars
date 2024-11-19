@@ -7,3 +7,5 @@ node_pool_size = 2
 node_pool_vm_size = "Standard_DS2_v2"
 dns_prefix = "flask-app-dns"
 docker_image_tag = "latest"
+storage_account_name = "terraformstate1910"
+container_name       = "tfstatestorage"

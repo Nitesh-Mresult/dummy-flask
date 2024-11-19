@@ -25,8 +25,9 @@ jobs:
       - name: Log in to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.azure_credentials }}
+          creds: ${{ secrets.azure_credentials }}  # Using the azure_credentials secret
 
+      # Set Azure Service Principal Credentials as environment variables
       - name: Set Azure Service Principal Credentials for Terraform
         run: |
           echo "ARM_CLIENT_ID=${{ fromJson(secrets.azure_credentials).clientId }}" >> $GITHUB_ENV
@@ -35,20 +36,30 @@ jobs:
           echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
 
       - name: Terraform Init
-        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
-        working-directory: ./infrastructure
+        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_NAME }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
+        working-directory: ./infrastructure  # Make sure path to Terraform files is correct
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan -input=false -no-color -lock=false
-        working-directory: ./infrastructure
+        env:
+          TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
+          TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
+          TF_RESOURCE_GROUP: ${{ secrets.TF_RESOURCE_GROUP }}
+          TF_KEY: ${{ secrets.TF_KEY }}
+        working-directory: ./infrastructure  # Ensure you're in the correct directory
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan -lock=false
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
+          TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
+          TF_RESOURCE_GROUP: ${{ secrets.TF_RESOURCE_GROUP }}
+          TF_KEY: ${{ secrets.TF_KEY }}
         working-directory: ./infrastructure
 
   build-and-deploy:
     runs-on: ubuntu-latest
-    needs: infrastructure-deploy
+    needs: infrastructure-deploy  # Ensure infrastructure is deployed before app deployment
 
     steps:
       - name: Checkout Flask Application Code
@@ -60,15 +71,15 @@ jobs:
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: niteshcontainers.azurecr.io
+          login-server: niteshcontainers.azurecr.io  # Replace with your ACR URL
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_TAG=${{ github.sha }}
-          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login
-          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG
+          IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
+          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login  # Build Docker image for Flask app
+          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG  # Push image to ACR
 
       - name: Set up AKS credentials
         run: |
@@ -76,11 +87,11 @@ jobs:
 
       - name: Update AKS Deployment
         run: |
-          kubectl apply -f app/kubernetes/deployment.yaml
-          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
-          kubectl apply -f app/kubernetes/my-app-service.yaml
-          kubectl apply -f app/kubernetes/my-app-ingress.yaml
+          kubectl apply -f app/kubernetes/deployment.yaml  # Apply the Kubernetes deployment
+          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}  # Update image in the deployment
+          kubectl apply -f app/kubernetes/my-app-service.yaml  # Apply service definition
+          kubectl apply -f app/kubernetes/my-app-ingress.yaml  # Apply ingress definition
 
       - name: Verify Deployment Status
         run: |
-          kubectl rollout status deployment/flask-app-deployment
+          kubectl rollout status deployment/flask-app-deployment  # Ensure the deployment is successful

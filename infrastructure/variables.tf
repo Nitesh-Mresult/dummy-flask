@@ -18,3 +18,13 @@ variable "tfstate_key" {
   type        = string
   default     = "terraform.tfstate"  # Default to a common Terraform state file name
 }
+
+variable "dns_prefix" {
+  description = "DNS prefix for the AKS cluster."
+  type        = string
+}
+
+variable "aks_cluster_name" {
+  description = "The name of the AKS cluster."
+  type        = string
+}
