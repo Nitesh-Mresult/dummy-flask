@@ -36,7 +36,7 @@ jobs:
           echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
 
       - name: Terraform Init
-        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_NAME }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
+        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure  # Make sure path to Terraform files is correct
 
       - name: Terraform Plan
