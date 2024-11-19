@@ -1,3 +1,5 @@
+# .github/workflows/ci-cd.yml
+
 name: Deploy Flask App to AKS with Terraform
 
 on:
@@ -6,14 +8,18 @@ on:
       - main
 
 jobs:
-  # This job deploys infrastructure using Terraform
   infrastructure-deploy:
     runs-on: ubuntu-latest
     environment: production
 
     steps:
+      # Checkout the repository to get the Terraform code and application code
       - name: Checkout Repository
         uses: actions/checkout@v2
+
+      # List files in infrastructure directory to confirm the path
+      - name: List files in infrastructure directory
+        run: ls -la ./infrastructure
 
       # Set up Terraform
       - name: Set up Terraform
@@ -21,42 +27,66 @@ jobs:
         with:
           terraform_version: '1.5.0'
 
-      # Log in to Azure using Azure Service Principal
+      # Log in to Azure using Azure Service Principal from GitHub secrets
       - name: Log in to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.azure_credentials }}  # Using the azure_credentials secret
 
-      # Initialize Terraform with the correct backend configuration
+      # Set Azure Service Principal Credentials as environment variables for Terraform
+      - name: Set Azure Service Principal Credentials for Terraform
+        run: |
+          echo "ARM_CLIENT_ID=${{ fromJson(secrets.azure_credentials).clientId }}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ fromJson(secrets.azure_credentials).clientSecret }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ fromJson(secrets.azure_credentials).tenantId }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
+
+      # Terraform initialization (for backend configuration using Azure Storage)
       - name: Terraform Init
         run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
-        working-directory: ./infrastructure
+        working-directory: ./infrastructure  # Make sure path to Terraform files is correct
 
-      # Terraform Plan
+      # Run Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan -input=false -no-color -lock=false
-        working-directory: ./infrastructure
+        env:
+          TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
+          TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
+          TF_RESOURCE_GROUP: ${{ secrets.TF_RESOURCE_GROUP }}
+          TF_KEY: ${{ secrets.TF_KEY }}
+        working-directory: ./infrastructure  # Ensure you're in the correct directory
 
-      # Apply Terraform Plan
+      # Apply the Terraform Plan
       - name: Terraform Apply
         run: terraform apply -auto-approve -lock=false tfplan
+        env:
+          TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
+          TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
+          TF_RESOURCE_GROUP: ${{ secrets.TF_RESOURCE_GROUP }}
+          TF_KEY: ${{ secrets.TF_KEY }}
         working-directory: ./infrastructure
 
-  # This job builds and deploys the application to AKS
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: infrastructure-deploy  # Ensure infrastructure is deployed before app deployment
     environment: production
 
     steps:
-      - name: Checkout Flask Application Code
+      # Step 1: Check out the code from GitHub
+      - name: Checkout Code
         uses: actions/checkout@v2
 
-      # Set up Docker Buildx
+      # Step 2: Log in to Azure using Azure credentials from GitHub Secrets
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Step 3: Set up Docker Buildx (for building Docker images)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      # Log in to Azure Container Registry (ACR)
+      # Step 4: Login to Azure Container Registry (ACR)
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
@@ -64,21 +94,20 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # Build and push Docker image to ACR
+      # Step 5: Build and push the Docker image to ACR
       - name: Build and Push Docker Image
         run: |
           docker build -t niteshcontainers.azurecr.io/flask-app:${{ github.sha }} app/login
           docker push niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
-
-      # Set up AKS credentials to interact with AKS cluster
+      # Step 6: Set up AKS credentials
       - name: Set up AKS credentials
         run: az aks get-credentials --resource-group POC_test --name flask-app
 
-      # Verify kubectl context
+      # Step 7: Verify kubectl context (optional for debugging)
       - name: Verify kubectl context
         run: kubectl config current-context
 
-      # Deploy the application to AKS
+      # Step 8: Deploy to AKS by updating the image in the deployment
       - name: Deploy to AKS
         run: |
           kubectl apply -f app/kubernetes/deployment.yaml
