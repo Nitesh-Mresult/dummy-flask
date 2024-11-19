@@ -58,7 +58,7 @@ jobs:
 
       # Apply the Terraform Plan
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -lock=false tfplan
         env:
           TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
           TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
