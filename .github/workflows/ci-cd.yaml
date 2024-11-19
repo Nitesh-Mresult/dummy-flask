@@ -1,10 +1,3 @@
-name: Deploy Flask App to AKS with Terraform
-
-on:
-  push:
-    branches:
-      - main
-
 jobs:
   infrastructure-deploy:
     runs-on: ubuntu-latest
@@ -50,7 +43,7 @@ jobs:
         run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure
 
-      # Step 1.8: Plan and Apply
+      # Step 1.8: Run Terraform Plan and Apply sequentially
       - name: Terraform Plan and Apply
         run: |
           terraform plan -out=tfplan -input=false -no-color
