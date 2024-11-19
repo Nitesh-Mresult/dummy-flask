@@ -40,7 +40,6 @@ jobs:
           echo "ARM_CLIENT_SECRET=${{ fromJson(secrets.azure_credentials).clientSecret }}" >> $GITHUB_ENV
           echo "ARM_TENANT_ID=${{ fromJson(secrets.azure_credentials).tenantId }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
-
       # Terraform initialization (for backend configuration using Azure Storage)
       - name: Terraform Init
         run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
