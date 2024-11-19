@@ -1,3 +1,10 @@
+name: Deploy Flask App to AKS with Terraform
+
+on:
+  push:
+    branches:
+      - main
+
 jobs:
   infrastructure-deploy:
     runs-on: ubuntu-latest
@@ -8,23 +15,28 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      # Step 1.2: List files in 'infrastructure' directory (debugging step)
+      # Step 1.2: List files in the 'infrastructure' directory for debugging
       - name: List files in infrastructure directory
-        run: ls -la ./infrastructure  # Ensure .tf files are present
+        run: ls -la ./infrastructure  # Ensure Terraform files are present
 
-      # Step 1.3: Set up Terraform
+      # Step 1.3: Check Terraform version
+      - name: Check Terraform Version
+        run: terraform version
+        working-directory: ./infrastructure
+
+      # Step 1.4: Set up Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: '1.5.0'
 
-      # Step 1.4: Authenticate with Azure using Service Principal
+      # Step 1.5: Authenticate with Azure using Service Principal
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.azure_credentials }}  # Using the `azure_credentials` secret for authentication
 
-      # Step 1.5: Set Azure Service Principal Credentials for Terraform
+      # Step 1.6: Set Azure Service Principal credentials as environment variables for Terraform
       - name: Set Azure Service Principal Credentials for Terraform
         run: |
           echo "ARM_CLIENT_ID=${{ fromJson(secrets.azure_credentials).clientId }}" >> $GITHUB_ENV
@@ -32,18 +44,22 @@ jobs:
           echo "ARM_TENANT_ID=${{ fromJson(secrets.azure_credentials).tenantId }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
 
-      # Step 1.6: Force Unlock Terraform State (if necessary)
-      - name: Force Unlock Terraform State
+      # Step 1.7: Force Unlock Terraform State (if the state lock exists)
+      - name: Force Unlock Terraform State (if necessary)
         run: terraform force-unlock 4b760752-4459-1dac-5859-1fa8ee6ed04b
         working-directory: ./infrastructure
-        continue-on-error: true  # Continue even if force-unlock fails
+        continue-on-error: true  # Continue even if the force-unlock fails
 
-      # Step 1.7: Initialize Terraform with backend configuration
+      # Step 1.8: Initialize Terraform with backend configuration
       - name: Terraform Init
-        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
+        run: terraform init \
+          -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" \
+          -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure
 
-      # Step 1.8: Run Terraform Plan and Apply sequentially
+      # Step 1.9: Run Terraform Plan and Apply sequentially
       - name: Terraform Plan and Apply
         run: |
           terraform plan -out=tfplan -input=false -no-color
@@ -67,16 +83,16 @@ jobs:
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: niteshcontainers.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          login-server: niteshcontainers.azurecr.io  # Replace with your ACR URL
+          username: ${{ secrets.ACR_USERNAME }}  # Your ACR username stored as a secret
+          password: ${{ secrets.ACR_PASSWORD }}  # Your ACR password stored as a secret
 
       # Step 2.4: Build and Push Docker Image to ACR
       - name: Build and Push Docker Image
         run: |
-          IMAGE_TAG=${{ github.sha }}
-          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login
-          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG
+          IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
+          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login  # Build Docker image for Flask app
+          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG  # Push image to ACR
 
       # Step 2.5: Set up AKS credentials
       - name: Set up AKS credentials
@@ -86,12 +102,12 @@ jobs:
       # Step 2.6: Deploy to AKS by updating the image in the deployment
       - name: Update AKS Deployment
         run: |
-          kubectl apply -f app/kubernetes/deployment.yaml
-          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}
-          kubectl apply -f app/kubernetes/my-app-service.yaml
-          kubectl apply -f app/kubernetes/my-app-ingress.yaml
+          kubectl apply -f app/kubernetes/deployment.yaml  # Apply the Kubernetes deployment
+          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}  # Update image in the deployment
+          kubectl apply -f app/kubernetes/my-app-service.yaml  # Apply service definition
+          kubectl apply -f app/kubernetes/my-app-ingress.yaml  # Apply ingress definition
 
       # Step 2.7: Verify deployment status in AKS
       - name: Verify Deployment Status
         run: |
-          kubectl rollout status deployment/flask-app-deployment
+          kubectl rollout status deployment/flask-app-deployment  # Ensure the deployment is successful
