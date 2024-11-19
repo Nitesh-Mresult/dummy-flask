@@ -1,9 +1,10 @@
+# main.tf
+
 provider "azurerm" {
   features {}
-  subscription_id = var.subscription_id  # Optional, will be pulled from AZURE_CREDENTIALS
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-  tenant_id       = var.tenant_id
+
+  # Azure credentials will be automatically pulled from the environment
+  # when using the azure/login GitHub Action
 }
 
 resource "azurerm_resource_group" "rg" {

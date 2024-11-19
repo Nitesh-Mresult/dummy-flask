@@ -1,3 +1,5 @@
+# .github/workflows/ci-cd.yml
+
 name: Deploy Flask App to AKS with Terraform
 
 on:
@@ -11,23 +13,27 @@ jobs:
     environment: production
 
     steps:
+      # Checkout the repository to get the Terraform code and application code
       - name: Checkout Repository
         uses: actions/checkout@v2
 
+      # List files in infrastructure directory to confirm the path
       - name: List files in infrastructure directory
         run: ls -la ./infrastructure
 
+      # Set up Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: '1.5.0'
 
+      # Log in to Azure using Azure Service Principal from GitHub secrets
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.azure_credentials }}  # Using the azure_credentials secret
 
-      # Set Azure Service Principal Credentials as environment variables
+      # Set Azure Service Principal Credentials as environment variables for Terraform
       - name: Set Azure Service Principal Credentials for Terraform
         run: |
           echo "ARM_CLIENT_ID=${{ fromJson(secrets.azure_credentials).clientId }}" >> $GITHUB_ENV
@@ -35,10 +41,12 @@ jobs:
           echo "ARM_TENANT_ID=${{ fromJson(secrets.azure_credentials).tenantId }}" >> $GITHUB_ENV
           echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
 
+      # Terraform initialization (for backend configuration using Azure Storage)
       - name: Terraform Init
         run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
         working-directory: ./infrastructure  # Make sure path to Terraform files is correct
 
+      # Run Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan -input=false -no-color -lock=false
         env:
@@ -48,6 +56,7 @@ jobs:
           TF_KEY: ${{ secrets.TF_KEY }}
         working-directory: ./infrastructure  # Ensure you're in the correct directory
 
+      # Apply the Terraform Plan
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         env:
@@ -60,38 +69,46 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: infrastructure-deploy  # Ensure infrastructure is deployed before app deployment
+    environment: production
 
     steps:
+      # Checkout Flask Application Code
       - name: Checkout Flask Application Code
         uses: actions/checkout@v2
 
+      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
+      # Log in to Azure Container Registry (ACR)
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: niteshcontainers.azurecr.io  # Replace with your ACR URL
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}  # Azure Container Registry URL (e.g., 'your-acr-name.azurecr.io')
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      # Build and Push Docker Image for Flask App
       - name: Build and Push Docker Image
         run: |
           IMAGE_TAG=${{ github.sha }}  # Use commit SHA as image tag
-          docker build -t niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG app/login  # Build Docker image for Flask app
-          docker push niteshcontainers.azurecr.io/flask-app:$IMAGE_TAG  # Push image to ACR
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/flask-app:$IMAGE_TAG app/login  # Build Docker image for Flask app
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/flask-app:$IMAGE_TAG  # Push image to ACR
 
+      # Set up AKS credentials to access the cluster
       - name: Set up AKS credentials
         run: |
           az aks get-credentials --resource-group ${{ secrets.TF_RESOURCE_GROUP }} --name flask-app --overwrite-existing
 
+      # Deploy/Update the AKS Deployment with new image
       - name: Update AKS Deployment
         run: |
           kubectl apply -f app/kubernetes/deployment.yaml  # Apply the Kubernetes deployment
-          kubectl set image deployment/flask-app-deployment flask-app=niteshcontainers.azurecr.io/flask-app:${{ github.sha }}  # Update image in the deployment
+          kubectl set image deployment/flask-app-deployment flask-app=${{ secrets.ACR_LOGIN_SERVER }}/flask-app:${{ github.sha }}  # Update image in the deployment
           kubectl apply -f app/kubernetes/my-app-service.yaml  # Apply service definition
           kubectl apply -f app/kubernetes/my-app-ingress.yaml  # Apply ingress definition
 
+      # Verify the deployment status in AKS
       - name: Verify Deployment Status
         run: |
           kubectl rollout status deployment/flask-app-deployment  # Ensure the deployment is successful
