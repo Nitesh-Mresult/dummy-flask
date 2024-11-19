@@ -1,5 +1,7 @@
 provider "azurerm" {
   features {}
+  version = ">= 3.0"  # Specify a compatible version
+
 
   # Azure credentials will be automatically pulled from the environment
   # when using the azure/login GitHub Action

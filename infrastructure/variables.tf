@@ -51,3 +51,8 @@ variable "storage_account_name" {
   description = "The name of the storage account for Terraform state"
   type        = string
 }
+
+variable "container_name" {
+  description = "The container name"
+  type        = string
+}
