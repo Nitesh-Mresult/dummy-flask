@@ -41,3 +41,13 @@ variable "subscription_id" {
   type        = string
   default     = "your-subscription-id"  # Replace with your subscription ID
 }
+
+variable "docker_image_tag" {
+  description = "The Docker image tag for the Flask application"
+  type        = string
+}
+
+variable "storage_account_name" {
+  description = "The name of the storage account for Terraform state"
+  type        = string
+}

@@ -13,58 +13,38 @@ jobs:
     environment: production
 
     steps:
-      # Checkout the repository to get the Terraform code and application code
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+  - name: Checkout code
+    uses: actions/checkout@v2
 
-      # List files in infrastructure directory to confirm the path
-      - name: List files in infrastructure directory
-        run: ls -la ./infrastructure
+  - name: Set up Terraform
+    uses: hashicorp/setup-terraform@v1
+    with:
+      terraform_version: '1.5.0'
 
-      # Set up Terraform
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: '1.5.0'
+  - name: Log in to Azure
+    uses: azure/login@v1
+    with:
+      creds: ${{ secrets.azure_credentials }}  # Use GitHub secrets for Azure credentials
 
-      # Log in to Azure using Azure Service Principal from GitHub secrets
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.azure_credentials }}  # Using the azure_credentials secret
+  - name: Terraform Init
+    run: terraform init
+    working-directory: ./infrastructure  # Adjust path to your Terraform directory
 
-      # Set Azure Service Principal Credentials as environment variables for Terraform
-      - name: Set Azure Service Principal Credentials for Terraform
-        run: |
-          echo "ARM_CLIENT_ID=${{ fromJson(secrets.azure_credentials).clientId }}" >> $GITHUB_ENV
-          echo "ARM_CLIENT_SECRET=${{ fromJson(secrets.azure_credentials).clientSecret }}" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=${{ fromJson(secrets.azure_credentials).tenantId }}" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.azure_credentials).subscriptionId }}" >> $GITHUB_ENV
+  # Import the resources if they don't exist in the state yet
+  - name: Import Resources
+    run: |
+      terraform import data.azurerm_resource_group.rg /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.RESOURCE_GROUP_NAME }}
+      terraform import data.azurerm_container_registry.example /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.RESOURCE_GROUP_NAME }}/providers/Microsoft.ContainerRegistry/registries/${{ secrets.ACR_NAME }}
+      terraform import data.azurerm_kubernetes_cluster.example /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.RESOURCE_GROUP_NAME }}/providers/Microsoft.ContainerService/managedClusters/${{ secrets.AKS_CLUSTER_NAME }}
+    working-directory: ./infrastructure
 
-      # Terraform initialization (for backend configuration using Azure Storage)
-      - name: Terraform Init
-        run: terraform init -backend-config="resource_group_name=${{ secrets.TF_RESOURCE_GROUP }}" -backend-config="storage_account_name=${{ secrets.TF_STORAGE_ACCOUNT }}" -backend-config="container_name=${{ secrets.TF_CONTAINER_NAME }}" -backend-config="key=${{ secrets.TF_KEY }}"
-        working-directory: ./infrastructure  # Make sure path to Terraform files is correct
+  - name: Terraform Plan
+    run: terraform plan -out=tfplan
+    working-directory: ./infrastructure
 
-      # Run Terraform Plan
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan -input=false -no-color -lock=false
-        env:
-          TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
-          TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
-          TF_RESOURCE_GROUP: ${{ secrets.TF_RESOURCE_GROUP }}
-          TF_KEY: ${{ secrets.TF_KEY }}
-        working-directory: ./infrastructure  # Ensure you're in the correct directory
-
-      # Apply the Terraform Plan
-      - name: Terraform Apply
-        run: terraform apply -auto-approve -lock=false tfplan
-        env:
-          TF_STORAGE_NAME: ${{ secrets.TF_STORAGE_NAME }}
-          TF_CONTAINER_NAME: ${{ secrets.TF_CONTAINER_NAME }}
-          TF_RESOURCE_GROUP: ${{ secrets.TF_RESOURCE_GROUP }}
-          TF_KEY: ${{ secrets.TF_KEY }}
-        working-directory: ./infrastructure
+  - name: Terraform Apply
+    run: terraform apply -auto-approve tfplan
+    working-directory: ./infrastructure
 
   build-and-deploy:
     runs-on: ubuntu-latest
